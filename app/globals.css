@@ -88,15 +88,32 @@ button, input, select, textarea { font: inherit; }
   border-right: 1px solid #141312;
 }
 
-/* Portal Ether Fluids */
-.portal-purple-fluid {
-  background: radial-gradient(circle at 50% 50%, #e879f9 0%, #a855f7 35%, #581c87 70%, #2e1065 100%);
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+/* Minecraft Pixel Art Diamond Sword */
+.mc-diamond-sword {
+  width: 32px;
+  height: 32px;
+  background-image: 
+    radial-gradient(circle, #55ffff 40%, transparent 40%),
+    linear-gradient(45deg, transparent 40%, #00aaaa 40%, #55ffff 50%, #00aaaa 60%, transparent 60%);
+  position: relative;
+  filter: drop-shadow(2px 2px 0px #000);
 }
 
-.portal-cyan-fluid {
-  background: radial-gradient(circle at 50% 50%, #a5f3fc 0%, #38bdf8 35%, #0284c7 70%, #082f49 100%);
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+/* Minecraft Pixel Art TNT / Arrow projectile */
+.mc-arrow-proj {
+  width: 48px;
+  height: 12px;
+  background: linear-gradient(90deg, #5c4033 0%, #8b5a2b 70%, #dcdcdc 70%, #ffffff 85%, #708090 100%);
+  border: 2px solid #000;
+  position: relative;
+}
+
+.mc-fireball-pixel {
+  width: 28px;
+  height: 28px;
+  background: radial-gradient(circle, #ffff55 20%, #ffaa00 50%, #aa0000 80%, #000000 100%);
+  box-shadow: 0 0 16px #ff5555, 0 0 24px #ffaa00;
+  border: 2px solid #000;
 }
 
 @keyframes portal-drift {

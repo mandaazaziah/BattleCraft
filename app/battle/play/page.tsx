@@ -45,13 +45,16 @@ export default function Play() {
     const s = JSON.parse(raw);
     setSetup(s);
 
-    const pool = sampleQuestions.filter(
-      (q) => q.category === s.category && q.difficulty === s.difficulty
-    );
+    // Ambil soal berdasarkan kategori (literasi / numerasi) dan acak 25 soal
+    const pool = sampleQuestions.filter((q) => q.category === s.category);
+    const shuffledPool = shuffle(pool);
 
-    const expanded = shuffle([...pool, ...pool, ...pool, ...pool, ...pool]);
-    setAQs(shuffle(expanded).slice(0, 25));
-    setBQs(shuffle(expanded).slice(0, 25));
+    // Ambil 25 soal pertama (atau duplicate jika kurang dari 25)
+    const questions25A = shuffledPool.slice(0, 25);
+    const questions25B = shuffle([...shuffledPool]).slice(0, 25);
+
+    setAQs(questions25A);
+    setBQs(questions25B);
   }, [router]);
 
   const qA = aQs[round];
@@ -268,74 +271,111 @@ export default function Play() {
         </div>
 
         {/* ARENA */}
-        <div className="relative mb-3 h-[250px] overflow-hidden rounded-2xl border-4 border-slate-900/70 bg-gradient-to-b from-sky-300 to-green-600 shadow-inner md:h-[320px]">
+        <div className="relative mb-3 h-[250px] overflow-hidden rounded-2xl border-4 border-slate-900/70 bg-gradient-to-b from-sky-400 via-sky-300 to-green-600 shadow-inner md:h-[320px]">
           <div className="voxel-cloud left-[8%] top-8" />
           <div className="voxel-cloud right-[10%] top-12" />
-          <div className="absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(#67a84a_0_30%,#8b5a2b_30%_100%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(#5fa33e_0_30%,#7a4d25_30%_100%)] border-t-4 border-[#3e7025]" />
 
-          <div className="absolute bottom-14 left-[12%] md:left-[20%]">
+          {/* Karakter Team A (Kiri) */}
+          <div className="absolute bottom-10 left-[10%] md:left-[18%] z-10">
             <Character team="A" attacking={projectile === "A"} hit={hit === "A"} />
           </div>
 
-          <div className="absolute bottom-14 right-[12%] md:right-[20%]">
+          {/* Karakter Team B (Kanan) */}
+          <div className="absolute bottom-10 right-[10%] md:right-[18%] z-10">
             <Character team="B" attacking={projectile === "B"} hit={hit === "B"} />
           </div>
 
-          <motion.div
-            className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-xl border-4 border-black bg-yellow-400 px-5 py-2 text-3xl font-black text-slate-900 shadow-[5px_5px_0_#000]"
-            animate={{ scale: [1, 1.08, 1], rotate: [-2, 2, -2] }}
-            transition={{ repeat: Infinity, duration: 1.4 }}
-          >
-            VS
-          </motion.div>
+          {/* TEKS VS DI TENGAH-TENGAH PERSIS */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <motion.div
+              className="rounded-xl border-4 border-black bg-yellow-400 px-6 py-2.5 text-3xl md:text-4xl font-black text-slate-950 shadow-[5px_5px_0_#000]"
+              animate={{ scale: [1, 1.1, 1], rotate: [-2, 2, -2] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+            >
+              VS
+            </motion.div>
+          </div>
 
+          {/* Animasi Lempar Menyerang: Sesuai Senjata Karakter (Trisula untuk Team A, Panah untuk Team B) */}
           <AnimatePresence>
             {projectile && (
               <motion.div
                 key={`${projectile}-${round}-${firstCorrect}`}
                 initial={{
                   opacity: 0,
-                  x: projectile === "A" ? -80 : 80,
-                  y: 15,
-                  scale: 0.3,
-                  rotate: 0,
+                  x: projectile === "A" ? -140 : 140,
+                  y: -15,
+                  scale: 0.7,
+                  rotate: projectile === "A" ? 45 : 0,
                 }}
                 animate={{
                   opacity: [0, 1, 1, 0],
-                  x: projectile === "A" ? [-80, 0, 170] : [80, 0, -170],
-                  y: [15, -35, 5],
-                  scale: [0.3, 1, 1.2],
-                  rotate: [0, 180, 360],
+                  x: projectile === "A" ? [-140, 0, 240] : [140, 0, -240],
+                  y: [-15, -45, 10],
+                  scale: [0.7, 1.2, 1],
+                  rotate: projectile === "A" ? [45, 405, 765] : [0, 0, 0],
                 }}
-                transition={{ duration: 0.65 }}
+                transition={{ duration: 0.65, ease: "easeOut" }}
                 onAnimationComplete={() => setProjectile(null)}
-                className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2"
+                className="absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
               >
-                <div className="h-10 w-10 rotate-45 border-4 border-black bg-cyan-300 shadow-[4px_4px_0_#0f4c5c]" />
-                <div className="absolute -left-4 top-1/2 h-3 w-16 -translate-y-1/2 bg-white/80 blur-sm" />
+                {projectile === "A" ? (
+                  /* Output Serangan Team A: Trisula Terbang Berputar (Flying Trident) */
+                  <div className="relative flex items-center justify-center">
+                    <div className="relative w-14 h-14 select-none filter drop-shadow-[0_0_12px_#2dd4bf]">
+                      {/* 3 Mata Trisula */}
+                      <div className="absolute top-0 left-1 w-2.5 h-6 bg-[#2dd4bf] border-2 border-[#0f766e] shadow-[inset_1px_1px_0px_#ffffff]" />
+                      <div className="absolute top-[-4px] left-4 w-2.5 h-8 bg-[#5eead4] border-2 border-[#0f766e] shadow-[inset_1px_1px_0px_#ffffff]" />
+                      <div className="absolute top-0 left-7 w-2.5 h-6 bg-[#2dd4bf] border-2 border-[#0f766e] shadow-[inset_1px_1px_0px_#ffffff]" />
+                      <div className="absolute top-5 left-1 w-9 h-2.5 bg-[#0f766e] border border-black" />
+                      <div className="absolute top-7 left-4 w-2.5 h-9 bg-[#115e59] border border-black" />
+                    </div>
+                    {/* Jejak Partikel Air/Buih Prismarine */}
+                    <div className="absolute -left-10 top-1/2 -translate-y-1/2 w-20 h-4 bg-gradient-to-r from-transparent via-[#2dd4bf]/70 to-[#5eead4] rounded-full blur-[2px]" />
+                  </div>
+                ) : (
+                  /* Output Serangan Team B: Anak Panah Meluncur Lurus Cepat (Flying Tipped Arrow) */
+                  <div className="relative flex items-center justify-center">
+                    <div className="relative w-14 h-3.5 bg-[#8b5a2b] border border-black flex items-center shadow-[0_0_12px_#f97316]">
+                      {/* Mata Panah Flint Tajam Menghadap Kiri */}
+                      <div className="absolute -left-3 w-4 h-5 bg-[#4b5563] border border-black transform rotate-45 shadow-sm" />
+                      {/* Poros Kayu */}
+                      <div className="w-full h-1 bg-[#d97706]" />
+                      {/* Bulu Panah Putih (Feather Fletching) di Kanan */}
+                      <div className="absolute -right-2.5 w-3 h-5 bg-white border border-black" />
+                    </div>
+                    {/* Jejak Partikel Panah Melesat */}
+                    <div className="absolute -right-10 top-1/2 -translate-y-1/2 w-20 h-3 bg-gradient-to-l from-transparent via-orange-500/80 to-amber-300 rounded-full blur-[1px]" />
+                  </div>
+                )}
               </motion.div>
             )}
 
+            {/* Efek Kena Serangan (Hit Splash Minecraft Heart Damage & Particle) */}
             {hit && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.4 }}
-                animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1.3, 1] }}
-                className={`absolute top-1/2 z-30 text-3xl font-black text-yellow-300 ${
-                  hit === "A" ? "right-[18%]" : "left-[18%]"
+                animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1.4, 1.1] }}
+                transition={{ duration: 0.5 }}
+                className={`absolute top-1/3 z-40 flex items-center gap-1 font-black text-yellow-300 drop-shadow-[3px_3px_0_#000] ${
+                  hit === "A" ? "right-[15%] md:right-[22%]" : "left-[15%] md:left-[22%]"
                 }`}
               >
-                💥 -100
+                <span className="text-3xl">💔</span>
+                <span className="text-3xl text-red-500 font-pixel drop-shadow-[2px_2px_0_#000]">-100</span>
               </motion.div>
             )}
           </AnimatePresence>
 
+          {/* Notifikasi Siapa Cepat Duluan */}
           {firstCorrect && (
             <div
-              className={`absolute top-3 left-1/2 -translate-x-1/2 rounded-full border-2 border-black bg-white px-4 py-1 text-xs font-black ${
+              className={`absolute top-3 left-1/2 -translate-x-1/2 rounded-full border-2 border-black bg-white/95 px-5 py-1 text-xs md:text-sm font-black shadow-md z-30 ${
                 firstCorrect === "A" ? "text-blue-700" : "text-red-700"
               }`}
             >
-              ⚡ {firstCorrect === "A" ? setup.a : setup.b} DULUAN!
+              ⚡ {firstCorrect === "A" ? setup.a : setup.b} MENYERANG LEBIH CEPAT! (+100)
             </div>
           )}
         </div>
