@@ -11,7 +11,7 @@ export default function Dashboard(){
  const qs=sampleQuestions.filter(q=>filter==="all"||q.category===filter);
  return <main className="min-h-screen bg-slate-100 text-slate-950 p-5 md:p-8">
   <div className="max-w-6xl mx-auto">
-   <header className="flex flex-wrap justify-between gap-4 items-center mb-6"><div><div className="pixel-text text-xs text-indigo-700">PIXEL QUEST ADMIN</div><h1 className="text-4xl font-bold mt-2">Question Manager</h1></div><div className="flex gap-2"><PixelButton href="/" className="bg-slate-200">HOME</PixelButton><button onClick={logout} className="pixel-button rounded bg-red-400 px-5 py-3 font-bold">LOGOUT</button></div></header>
+   <header className="flex flex-wrap justify-between gap-4 items-center mb-6"><div><div className="pixel-text text-xs text-indigo-700">BATTLECRAFT ADMIN</div><h1 className="text-4xl font-bold mt-2">Question Manager</h1></div><div className="flex gap-2"><PixelButton href="/" className="bg-slate-200">HOME</PixelButton><button onClick={logout} className="pixel-button rounded bg-red-400 px-5 py-3 font-bold">LOGOUT</button></div></header>
    <div className="grid md:grid-cols-3 gap-4 mb-6">
     <div className="pixel-border rounded bg-white p-5"><div className="text-slate-500">Total Soal Demo</div><div className="text-4xl font-bold">{sampleQuestions.length}</div></div>
     <div className="pixel-border rounded bg-white p-5"><div className="text-slate-500">Literasi</div><div className="text-4xl font-bold">{sampleQuestions.filter(q=>q.category==="literasi").length}</div></div>

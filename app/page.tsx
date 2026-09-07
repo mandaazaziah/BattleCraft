@@ -12,7 +12,7 @@ export default function Home() {
 
       <div className="relative z-10 min-h-screen flex flex-col">
         <header className="flex items-center justify-between p-5">
-          <div className="pixel-text text-xs md:text-sm text-yellow-300 drop-shadow-[2px_2px_0_#000]">⚔️ PIXEL QUEST</div>
+          <div className="pixel-text text-xs md:text-sm text-yellow-300 drop-shadow-[2px_2px_0_#000]">⚔️ BATTLECRAFT</div>
           <div className="flex gap-2 items-center">
             <SoundButton />
             <PixelButton href="/admin/login" className="bg-slate-100 text-sm">⚙ Admin Guru</PixelButton>
@@ -22,7 +22,7 @@ export default function Home() {
         <section className="flex-1 flex flex-col items-center justify-center px-6 pb-12">
           <motion.div initial={{opacity:0,y:-25}} animate={{opacity:1,y:0}} className="text-center mb-10">
             <div className="mb-2 text-5xl filter drop-shadow-md">⛏️ 🌳 🏰</div>
-            <h1 className="pixel-text text-3xl md:text-5xl text-white drop-shadow-[4px_4px_0_#000]">PIXEL QUEST</h1>
+            <h1 className="pixel-text text-3xl md:text-5xl text-white drop-shadow-[4px_4px_0_#000]">BATTLECRAFT</h1>
             <p className="mt-3 text-2xl text-yellow-100 font-bold drop-shadow-[2px_2px_0_#000]">Petualangan belajar dimulai di sini!</p>
           </motion.div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-24">

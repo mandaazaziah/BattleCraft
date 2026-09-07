@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pixel Quest — Education Battle",
+  title: "BattleCraft — Education Battle",
   description: "Minecraft-inspired literacy and numeracy learning battle.",
 };
 
