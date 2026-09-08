@@ -21,6 +21,7 @@ function SetupContent() {
   const [b, setB] = useState("");
   const [membersAStr, setMembersAStr] = useState("");
   const [membersBStr, setMembersBStr] = useState("");
+  const [timePerQ, setTimePerQ] = useState(20); // detik per soal, 0 = tanpa batas
   const [error, setError] = useState("");
 
   // Validasi: Nama Tim A dan Tim B wajib diisi (anggota bersifat opsional)
@@ -43,7 +44,7 @@ function SetupContent() {
       ? membersBStr.split(",").map((m) => m.trim()).filter(Boolean)
       : [];
 
-    const payload = { category, difficulty: "medium", a: a.trim(), b: b.trim(), membersA, membersB };
+    const payload = { category, difficulty: "medium", a: a.trim(), b: b.trim(), membersA, membersB, timePerQ };
     sessionStorage.setItem("battleSetup", JSON.stringify(payload));
     router.push("/battle/play");
   };
@@ -199,6 +200,34 @@ function SetupContent() {
                 />
                 <p className="mt-2 text-[13px] text-red-300/85 font-medium">Tulis nama anggota dipisah tanda koma (,)</p>
               </div>
+            </div>
+
+            {/* Waktu Pengerjaan Soal (Opsional) */}
+            <div className="bg-[#1a1c22] p-4 border-4 border-[#2c3038] shadow-[inset_2px_2px_0_#3b82f6,4px_4px_0_#000]">
+              <label className="font-bold text-yellow-300 flex items-center justify-between text-base">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⏱️</span>
+                  <span className="pixel-text text-xs text-yellow-300 drop-shadow-[1px_1px_0_#000]">Waktu Pengerjaan Soal</span>
+                </div>
+                <span className="text-xs text-yellow-400 font-bold">(Opsional)</span>
+              </label>
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="60"
+                  step="5"
+                  value={timePerQ}
+                  onChange={(e) => setTimePerQ(Number(e.target.value))}
+                  className="flex-1 accent-yellow-400"
+                />
+                <span className="pixel-text text-sm text-white bg-slate-900 px-3 py-1.5 rounded border-2 border-yellow-400 w-20 text-center">
+                  {timePerQ === 0 ? "TANPA BATAS" : `${timePerQ} DETIK`}
+                </span>
+              </div>
+              <p className="mt-2 text-[13px] text-yellow-200/80 font-medium">
+                Geser slider: 0 = tanpa batas waktu, 5-60 detik per soal.
+              </p>
             </div>
 
             {/* Tombol Mulai Battle (Minecraft Green Button Style with 3D Bevel) */}

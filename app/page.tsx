@@ -20,7 +20,7 @@ export default function Home() {
 
       <div className="relative z-10 min-h-screen flex flex-col">
         <header className="flex items-center justify-between p-5">
-          <div className="pixel-text text-xs md:text-sm text-yellow-300 drop-shadow-[2px_2px_0_#000]">⚔️ BATTLE-CRAFT</div>
+          <div />
           <div className="flex gap-2 items-center">
             <SoundButton />
             <PixelButton href="/admin/login" className="bg-slate-100 text-sm">⚙ Admin Guru</PixelButton>

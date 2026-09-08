@@ -43,6 +43,7 @@ export default function Play() {
   const router = useRouter();
   const { play } = useSoundSystem();
   const battleStartedRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [setup, setSetup] = useState<any>(null);
   const [round, setRound] = useState(0);
@@ -52,10 +53,14 @@ export default function Play() {
   const [hit, setHit] = useState<Team | null>(null);
   const [aQs, setAQs] = useState<Question[]>([]);
   const [bQs, setBQs] = useState<Question[]>([]);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [timerExpired, setTimerExpired] = useState(false);
   const [teamState, setTeamState] = useState<Record<Team, TeamState>>({
     A: { answered: false, feedback: null, selected: null },
     B: { answered: false, feedback: null, selected: null },
   });
+
+  const timePerQ: number = setup?.timePerQ ?? 0;
 
   useEffect(() => {
     const raw = sessionStorage.getItem("battleSetup");
@@ -77,6 +82,14 @@ export default function Play() {
 
     setAQs(questions25A);
     setBQs(questions25B);
+
+    // Mulai timer jika setup.timePerQ > 0
+    if (s.timePerQ && s.timePerQ > 0) {
+      setTimeLeft(s.timePerQ);
+      setTimerExpired(false);
+    } else {
+      setTimeLeft(null);
+    }
 
     // Battle start fanfare (hanya sekali)
     if (!battleStartedRef.current) {
@@ -139,6 +152,46 @@ export default function Play() {
     }
   };
 
+  // Timer countdown per soal (jika timePerQ > 0)
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0) return;
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev === null || prev <= 0) return prev;
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [timeLeft]);
+
+  // Saat timer habis, auto skip soal
+  useEffect(() => {
+    if (timeLeft === 0 && !timerExpired) {
+      setTimerExpired(true);
+      play("wrong");
+      // Tandai kedua tim sebagai selesai (otomatis ke round berikutnya)
+      setTeamState({
+        A: { answered: true, feedback: "wrong", selected: null },
+        B: { answered: true, feedback: "wrong", selected: null },
+      });
+    }
+  }, [timeLeft, timerExpired, play]);
+
+  // Reset timer & state saat round berubah
+  useEffect(() => {
+    if (timePerQ > 0) {
+      setTimeLeft(timePerQ);
+      setTimerExpired(false);
+    } else {
+      setTimeLeft(null);
+      setTimerExpired(false);
+    }
+  }, [round, timePerQ]);
+
   useEffect(() => {
     if (!bothAnswered) return;
 
@@ -183,8 +236,18 @@ export default function Play() {
               SOAL {round + 1}/25
             </div>
           </div>
-
-          <div className="text-2xl font-black">{score[team]}</div>
+          <div className="flex flex-col items-end gap-1">
+            <div className="text-2xl font-black">{score[team]}</div>
+            {timePerQ > 0 && timeLeft !== null && (
+              <div className={`pixel-text text-[10px] px-2 py-0.5 rounded border-2 ${
+                timeLeft <= 5
+                  ? "bg-red-500 text-white border-red-300 animate-pulse"
+                  : "bg-slate-700/80 text-yellow-300 border-yellow-500/60"
+              }`}>
+                ⏱ {timeLeft}s
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="h-3 bg-slate-900/20">
@@ -291,13 +354,35 @@ export default function Play() {
                 <div className="pixel-text text-xs">{setup.a}</div>
                 <div className="text-[10px] font-black">SOAL {round + 1}/25</div>
               </div>
-              <b className="text-xl">⭐ {score.A}</b>
+              <div className="flex flex-col items-end gap-1">
+                <b className="text-xl">⭐ {score.A}</b>
+                {timePerQ > 0 && timeLeft !== null && (
+                  <div className={`pixel-text text-[10px] px-2 py-0.5 rounded border-2 ${
+                    timeLeft <= 5
+                      ? "bg-red-500 text-white border-red-300 animate-pulse"
+                      : "bg-slate-700/80 text-yellow-300 border-yellow-500/60"
+                  }`}>
+                    ⏱ {timeLeft}s
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           <div className="rounded-xl border-4 border-red-900 bg-red-700 px-3 py-2 text-white shadow-[0_5px_0_rgba(0,0,0,.35)]">
             <div className="flex items-center justify-between">
-              <b className="text-xl">⭐ {score.B}</b>
+              <div className="flex flex-col items-start gap-1">
+                <b className="text-xl">⭐ {score.B}</b>
+                {timePerQ > 0 && timeLeft !== null && (
+                  <div className={`pixel-text text-[10px] px-2 py-0.5 rounded border-2 ${
+                    timeLeft <= 5
+                      ? "bg-red-500 text-white border-red-300 animate-pulse"
+                      : "bg-slate-700/80 text-yellow-300 border-yellow-500/60"
+                  }`}>
+                    ⏱ {timeLeft}s
+                  </div>
+                )}
+              </div>
               <div className="text-right">
                 <div className="pixel-text text-xs">{setup.b}</div>
                 <div className="text-[10px] font-black">SOAL {round + 1}/25</div>
@@ -423,7 +508,15 @@ export default function Play() {
         </div>
 
         <div className="mt-3 flex items-center justify-between rounded-xl border-4 border-slate-900 bg-slate-950 px-4 py-2 text-white shadow-[0_5px_0_rgba(0,0,0,.35)]">
-          <span className="text-xs font-black">⚡ SIAPA CEPAT DIA DAPAT</span>
+          <span className="text-xs font-black">
+            {timePerQ > 0 && timeLeft !== null ? (
+              <span className={timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-yellow-300"}>
+                ⏱ WAKTU: {timeLeft}s
+              </span>
+            ) : (
+              "⚡ SIAPA CEPAT DIA DAPAT"
+            )}
+          </span>
           <span className="pixel-text text-xs">ROUND {round + 1} / 25</span>
           <button
             onClick={() => router.push("/")}
