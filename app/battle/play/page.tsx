@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import Character from "@/components/Character";
 import { sampleQuestions, Question } from "@/lib/sampleQuestions";
 import { useSoundSystem } from "@/lib/useSound";
-import { supabase } from "@/lib/supabase";
 
 function shuffle<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
