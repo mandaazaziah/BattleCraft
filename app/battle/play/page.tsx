@@ -1,6 +1,6 @@
  "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import Character from "@/components/Character";
@@ -23,7 +23,6 @@ type TeamState = {
 export default function Play() {
   const router = useRouter();
   const { play } = useSoundSystem();
-  const battleStartedRef = useRef(false);
 
   const [setup, setSetup] = useState<any>(null);
   const [round, setRound] = useState(0);
@@ -59,11 +58,6 @@ export default function Play() {
     setAQs(questions25A);
     setBQs(questions25B);
 
-    // Battle start fanfare (hanya sekali)
-    if (!battleStartedRef.current) {
-      battleStartedRef.current = true;
-      setTimeout(() => play("battle_start"), 500);
-    }
   }, [router]);
 
   const qA = aQs[round];
@@ -91,6 +85,8 @@ export default function Play() {
 
     const correct = index === q.correct;
 
+    play(correct ? "correct" : "wrong");
+
     setTeamState((prev) => ({
       ...prev,
       [team]: {
@@ -106,10 +102,14 @@ export default function Play() {
       if (isFirst) {
         setFirstCorrect(team);
         setScore((prev) => ({ ...prev, [team]: prev[team] + 100 }));
+        play("score_up");
         setProjectile(team);
+        play("attack");
         setTimeout(() => setHit(team), 420);
+        setTimeout(() => play("hit"), 420);
       } else {
         setScore((prev) => ({ ...prev, [team]: prev[team] + 50 }));
+        play("score_up");
       }
     }
   };
@@ -125,6 +125,7 @@ export default function Play() {
         );
         router.push("/battle/result");
       } else {
+        play("round_next");
         setRound((r) => r + 1);
         resetRound();
       }

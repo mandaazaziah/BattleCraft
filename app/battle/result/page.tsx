@@ -1,9 +1,10 @@
  "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import PixelButton from "@/components/PixelButton";
+import { useSoundSystem } from "@/lib/useSound";
 
 const PENALTIES = [
   "🎤 Nyanyi 1 Lagu Anak-Anak / Pop",
@@ -18,6 +19,8 @@ const PENALTIES = [
 
 export default function Result() {
   const router = useRouter();
+  const { play } = useSoundSystem();
+  const resultSoundPlayedRef = useRef(false);
   const [setup, setSetup] = useState<any>(null);
   const [score, setScore] = useState<{ A: number; B: number }>({ A: 0, B: 0 });
 
@@ -32,9 +35,21 @@ export default function Result() {
 
     setSetup(JSON.parse(rawSetup));
     if (rawScore) {
-      setScore(JSON.parse(rawScore));
+      const finalScore = JSON.parse(rawScore) as { A: number; B: number };
+      setScore(finalScore);
+
+      if (!resultSoundPlayedRef.current) {
+        resultSoundPlayedRef.current = true;
+        play(
+          finalScore.A === finalScore.B
+            ? "draw"
+            : finalScore.A > finalScore.B
+              ? "win"
+              : "lose"
+        );
+      }
     }
-  }, [router]);
+  }, [play, router]);
 
   if (!setup) return null;
 
