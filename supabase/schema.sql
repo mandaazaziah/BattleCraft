@@ -65,6 +65,37 @@ create table if not exists public.penalties (
   updated_at timestamptz not null default now()
 );
 
+-- Compatibility migration for databases created from the first schema version.
+-- CREATE TABLE IF NOT EXISTS does not add columns to an existing table.
+alter table public.questions add column if not exists difficulty text;
+alter table public.questions add column if not exists is_active boolean;
+alter table public.questions add column if not exists updated_at timestamptz;
+
+update public.questions set difficulty = 'medium' where difficulty is null;
+update public.questions set is_active = true where is_active is null;
+update public.questions set updated_at = coalesce(created_at, now()) where updated_at is null;
+
+alter table public.questions alter column difficulty set default 'medium';
+alter table public.questions alter column difficulty set not null;
+alter table public.questions alter column is_active set default true;
+alter table public.questions alter column is_active set not null;
+alter table public.questions alter column updated_at set default now();
+alter table public.questions alter column updated_at set not null;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'questions_difficulty_check'
+      and conrelid = 'public.questions'::regclass
+  ) then
+    alter table public.questions
+      add constraint questions_difficulty_check
+      check (difficulty in ('easy', 'medium', 'hard'));
+  end if;
+end;
+$$;
+
 create index if not exists questions_category_active_idx
   on public.questions (category, is_active);
 create index if not exists questions_difficulty_idx

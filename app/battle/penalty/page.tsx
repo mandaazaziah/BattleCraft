@@ -8,14 +8,13 @@ import VoxelIcon from "@/components/VoxelIcon";
 import { useSoundSystem } from "@/lib/useSound";
 
 const PENALTIES = [
-  "🎤 Nyanyi 1 Lagu Anak-Anak / Pop",
-  "💃 Joget Gaya Karakter Minecraft 15 Detik",
+  "🎤 Nyanyi 1 Lagu Nasional",
+  "💃 Joget kicau mania",
   "🐔 Tirukan Suara Hewan Peliharaan",
-  "👏 Berikan Tepuk Tangan Hebat untuk Tim Pemenang",
-  "🏃 Lari di Tempat Sambil Teriak 'BattleCraft!' 10x",
-  "🗿 Pose Menjadi Patung Batu Selama 20 Detik",
-  "📖 Bacakan Pantun Lucu Buatan Sendiri",
-  "🦖 Tirukan Gaya Dinosaurus / Creeper Berjalan",
+  "👏 Tepuk dadang diding dudung",
+  "🗿 Membuat ekspresi wajah palng lucu",
+  "📖  Membuat kata-kata hari ini",
+  "🦖 Menirukan gerakan hewan",
 ];
 
 export default function PenaltyPage() {

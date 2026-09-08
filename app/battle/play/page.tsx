@@ -24,7 +24,6 @@ type TeamState = {
 type QuestionRow = {
   id: number;
   category: Question["category"];
-  difficulty: Question["difficulty"];
   question: string;
   option_a: string;
   option_b: string;
@@ -36,7 +35,6 @@ type QuestionRow = {
 const toQuestion = (row: QuestionRow): Question => ({
   id: row.id,
   category: row.category,
-  difficulty: row.difficulty,
   question: row.question,
   options: [row.option_a, row.option_b, row.option_c, row.option_d],
   correct: row.correct_answer.charCodeAt(0) - 65,
