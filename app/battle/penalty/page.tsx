@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import PixelButton from "@/components/PixelButton";
+import VoxelIcon from "@/components/VoxelIcon";
+import { useSoundSystem } from "@/lib/useSound";
 
 const PENALTIES = [
   "🎤 Nyanyi 1 Lagu Anak-Anak / Pop",
@@ -18,11 +20,25 @@ const PENALTIES = [
 
 export default function PenaltyPage() {
   const router = useRouter();
+  const { play } = useSoundSystem();
+  const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spinTickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [setup, setSetup] = useState<any>(null);
   const [score, setScore] = useState<{ A: number; B: number }>({ A: 0, B: 0 });
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedPenalty, setSelectedPenalty] = useState<string | null>(null);
   const [wheelRotation, setWheelRotation] = useState(0);
+
+  useEffect(() => {
+    return () => {
+      if (spinTimerRef.current) {
+        clearTimeout(spinTimerRef.current);
+      }
+      if (spinTickTimerRef.current) {
+        clearTimeout(spinTickTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const rawSetup = sessionStorage.getItem("battleSetup");
@@ -48,8 +64,28 @@ export default function PenaltyPage() {
 
   const spinWheel = () => {
     if (isSpinning) return;
+
     setIsSpinning(true);
     setSelectedPenalty(null);
+    play("spin_start");
+
+    const spinDuration = 3500;
+    const spinStartedAt = performance.now();
+    const playNextTick = () => {
+      const elapsed = performance.now() - spinStartedAt;
+      if (elapsed >= spinDuration || !spinTimerRef.current) {
+        spinTickTimerRef.current = null;
+        return;
+      }
+
+      const progress = elapsed / spinDuration;
+      const speed = Math.sin(progress * Math.PI);
+      const tickInterval = 55 + (1 - speed) * 180;
+
+      play("spin_tick");
+      spinTickTimerRef.current = setTimeout(playNextTick, tickInterval);
+    };
+    spinTickTimerRef.current = setTimeout(playNextTick, 100);
 
     const randomIndex = Math.floor(Math.random() * PENALTIES.length);
     const extraSpins = 5 * 360; // 5 putaran penuh
@@ -58,10 +94,16 @@ export default function PenaltyPage() {
 
     setWheelRotation((prev) => prev + targetAngle);
 
-    setTimeout(() => {
+    spinTimerRef.current = setTimeout(() => {
+      spinTimerRef.current = null;
+      if (spinTickTimerRef.current) {
+        clearTimeout(spinTickTimerRef.current);
+        spinTickTimerRef.current = null;
+      }
       setIsSpinning(false);
       setSelectedPenalty(PENALTIES[randomIndex]);
-    }, 3500);
+      play("spin_stop");
+    }, spinDuration);
   };
 
   return (
@@ -73,7 +115,7 @@ export default function PenaltyPage() {
         
         {/* HEADER */}
         <div className="mb-4">
-          <div className="text-5xl mb-2 animate-bounce">🎡</div>
+          <div className="mb-2 flex justify-center animate-bounce drop-shadow-[4px_4px_0_#000]"><VoxelIcon name="chest" size={62} /></div>
           <div className="pixel-text text-sm text-red-400 drop-shadow-[2px_2px_0_#000]">
             RODA HUKUMAN
           </div>
@@ -103,7 +145,7 @@ export default function PenaltyPage() {
             <div className="relative w-72 h-72 md:w-80 md:h-80 mb-6 flex items-center justify-center select-none">
               {/* Penunjuk Jarum Atas */}
               <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-40 text-4xl filter drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
-                🔻
+                <VoxelIcon name="sword" size={38} />
               </div>
 
               {/* Piringan Roda Berisi Ikon Minecraft di Setiap Segmen */}
@@ -117,14 +159,14 @@ export default function PenaltyPage() {
               >
                 {/* 8 Ikon Khas Minecraft di SEMUA 8 Segmen Roda (Tanpa Lingkaran Pinggir, Hanya Ikon + Sedikit Shadow) */}
                 {[
-                  { angle: 22.5, icon: "🧰", label: "Peti" },
-                  { angle: 67.5, icon: "🧨", label: "TNT" },
-                  { angle: 112.5, icon: "📦", label: "Tong" },
-                  { angle: 157.5, icon: "❓", label: "Misteri" },
-                  { angle: 202.5, icon: "🎁", label: "Kado" },
-                  { angle: 247.5, icon: "💎", label: "Berlian" },
-                  { angle: 292.5, icon: "🎒", label: "Tas" },
-                  { angle: 337.5, icon: "🧪", label: "Ramuan" },
+                  { angle: 22.5, icon: "chest" as const, label: "Peti" },
+                  { angle: 67.5, icon: "sword" as const, label: "Senjata" },
+                  { angle: 112.5, icon: "chest" as const, label: "Tong" },
+                  { angle: 157.5, icon: "tie" as const, label: "Misteri" },
+                  { angle: 202.5, icon: "trophy" as const, label: "Kado" },
+                  { angle: 247.5, icon: "sword" as const, label: "Berlian" },
+                  { angle: 292.5, icon: "chest" as const, label: "Tas" },
+                  { angle: 337.5, icon: "tie" as const, label: "Ramuan" },
                 ].map((item, i) => (
                   <div
                     key={i}
@@ -135,7 +177,7 @@ export default function PenaltyPage() {
                       className="text-2xl md:text-3xl filter drop-shadow-[2px_2px_2px_rgba(0,0,0,0.8)] select-none"
                       style={{ transform: `rotate(-${item.angle}deg)` }}
                     >
-                      {item.icon}
+                      <VoxelIcon name={item.icon} size={34} />
                     </span>
                   </div>
                 ))}
@@ -143,7 +185,7 @@ export default function PenaltyPage() {
                 {/* Logo Pusat Roda */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                   <div className="w-14 h-14 rounded-full bg-slate-950 border-4 border-yellow-400 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(0,0,0,0.9)]">
-                    ⚔️
+                    <VoxelIcon name="sword" size={34} />
                   </div>
                 </div>
               </motion.div>
@@ -171,9 +213,9 @@ export default function PenaltyPage() {
                   className="mt-6 p-5 bg-red-950/95 border-4 border-yellow-400 rounded-xl max-w-lg w-full shadow-2xl"
                 >
                   <div className="flex items-center justify-center gap-2 mb-1">
-                    <span className="text-2xl">🎁</span>
+                    <VoxelIcon name="chest" size={30} />
                     <span className="text-xs font-pixel text-yellow-300">KEJUTAN HUKUMAN TERBUKA:</span>
-                    <span className="text-2xl">📦</span>
+                    <VoxelIcon name="chest" size={30} />
                   </div>
                   <div className="text-xl md:text-2xl font-black text-white leading-relaxed">
                     {selectedPenalty}

@@ -17,6 +17,7 @@ export type SoundName =
   | "lose"
   | "draw"
   | "spin_start"
+  | "spin_tick"
   | "spin_stop"
   | "countdown"
   | "result_enter";
@@ -138,9 +139,13 @@ function doPlaySound(ctx: AudioContext, name: SoundName) {
       playTone(ctx, "square", 523, t + 0.10, 0.10, 0.10);
       break;
     case "win":
-      [523, 659, 784, 523, 659, 784, 1047].forEach((f, i) =>
-        playTone(ctx, "square", f, t + i * 0.10, 0.14, 0.16)
+      playTone(ctx, "triangle", 330, t, 0.18, 0.16);
+      playTone(ctx, "triangle", 392, t + 0.24, 0.18, 0.16);
+      playTone(ctx, "triangle", 494, t + 0.48, 0.18, 0.16);
+      [523, 659, 784, 1047].forEach((f, i) =>
+        playTone(ctx, "square", f, t + 0.78 + i * 0.12, 0.18, 0.17)
       );
+      playNoise(ctx, t + 0.78, 0.68, 0.05);
       break;
     case "lose":
       [392, 349, 330, 294].forEach((f, i) =>
@@ -152,13 +157,18 @@ function doPlaySound(ctx: AudioContext, name: SoundName) {
       playTone(ctx, "sine", 523, t + 0.30, 0.18, 0.12);
       break;
     case "spin_start":
-      playNoise(ctx, t, 0.35, 0.07);
-      playTone(ctx, "sawtooth", 180, t, 0.60, 0.06, 440);
+      playNoise(ctx, t, 0.08, 0.08);
+      playTone(ctx, "sawtooth", 140, t, 0.08, 0.08, 280);
+      break;
+    case "spin_tick":
+      playTone(ctx, "square", 980, t, 0.035, 0.09);
       break;
     case "spin_stop":
-      playNoise(ctx, t, 0.28, 0.12);
-      playTone(ctx, "triangle", 880, t + 0.05, 0.45, 0.18);
-      playTone(ctx, "sine", 1200, t + 0.22, 0.40, 0.14, 400);
+      playNoise(ctx, t, 0.34, 0.16);
+      playTone(ctx, "sawtooth", 110, t, 0.14, 0.14, 70);
+      playTone(ctx, "triangle", 660, t + 0.04, 0.18, 0.16, 990);
+      playTone(ctx, "square", 880, t + 0.16, 0.16, 0.14);
+      playTone(ctx, "sine", 1320, t + 0.27, 0.55, 0.18, 520);
       break;
     case "countdown":
       playTone(ctx, "square", 660, t, 0.10, 0.13);

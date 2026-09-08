@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import PixelButton from "@/components/PixelButton";
+import VoxelIcon from "@/components/VoxelIcon";
 import { useSoundSystem } from "@/lib/useSound";
 
 const PENALTIES = [
@@ -15,6 +16,19 @@ const PENALTIES = [
   "🗿 Pose Menjadi Patung Batu Selama 20 Detik",
   "📖 Bacakan Pantun Lucu Buatan Sendiri",
   "🦖 Tirukan Gaya Dinosaurus / Creeper Berjalan",
+];
+
+const CONFETTI = [
+  { emoji: "🎉", x: -270, y: 270, rotate: -220, delay: 0 },
+  { emoji: "✨", x: -210, y: 330, rotate: -150, delay: 0.06 },
+  { emoji: "🎊", x: -155, y: 235, rotate: -110, delay: 0.12 },
+  { emoji: "✨", x: -95, y: 365, rotate: -80, delay: 0.18 },
+  { emoji: "🎉", x: -40, y: 290, rotate: -40, delay: 0.04 },
+  { emoji: "🎊", x: 40, y: 290, rotate: 40, delay: 0.04 },
+  { emoji: "✨", x: 95, y: 365, rotate: 80, delay: 0.18 },
+  { emoji: "🎉", x: 155, y: 235, rotate: 110, delay: 0.12 },
+  { emoji: "✨", x: 210, y: 330, rotate: 150, delay: 0.06 },
+  { emoji: "🎊", x: 270, y: 270, rotate: 220, delay: 0 },
 ];
 
 export default function Result() {
@@ -62,7 +76,34 @@ export default function Result() {
       {/* Background Overlay */}
       <div className="absolute inset-0 bg-black/55 pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-3xl card-glass pixel-border rounded-2xl p-6 md:p-10 shadow-2xl backdrop-blur-md text-white my-6">
+      <div className="relative z-10 w-full max-w-3xl card-glass pixel-border rounded-2xl p-6 md:p-10 shadow-2xl backdrop-blur-md text-white my-6 overflow-hidden">
+        {winnerTeam && (
+          <AnimatePresence>
+            <div className="pointer-events-none absolute left-1/2 top-5 z-20 h-0 w-0" aria-hidden="true">
+              {CONFETTI.map((particle, index) => (
+                <motion.span
+                  key={`${particle.emoji}-${index}`}
+                  initial={{ opacity: 0, x: 0, y: 0, scale: 0.35, rotate: 0 }}
+                  animate={{
+                    opacity: [0, 1, 1, 0],
+                    x: particle.x,
+                    y: particle.y,
+                    scale: [0.35, 1.15, 0.9],
+                    rotate: particle.rotate,
+                  }}
+                  transition={{
+                    duration: 1.15 + (index % 3) * 0.1,
+                    delay: particle.delay,
+                    ease: [0.2, 0.8, 0.35, 1],
+                  }}
+                  className="absolute text-2xl drop-shadow-[3px_3px_0_#172033] md:text-3xl"
+                >
+                  {particle.emoji}
+                </motion.span>
+              ))}
+            </div>
+          </AnimatePresence>
+        )}
         
         {/* HEADER RESULT */}
         <div className="text-center mb-6">
@@ -70,9 +111,9 @@ export default function Result() {
             initial={{ scale: 0 }}
             animate={{ scale: [0, 1.2, 1] }}
             transition={{ duration: 0.6 }}
-            className="text-6xl md:text-7xl mb-2"
+            className="mb-2 flex justify-center drop-shadow-[4px_4px_0_#000]"
           >
-            🏆
+            <VoxelIcon name="trophy" size={78} className="h-16 w-16 md:h-20 md:w-20" />
           </motion.div>
           <div className="pixel-text text-sm md:text-base text-yellow-300 drop-shadow-[2px_2px_0_#000]">
             BATTLE COMPLETED (25 SOAL)
@@ -91,7 +132,7 @@ export default function Result() {
               : "bg-slate-900/80 border-blue-900"
           }`}>
             <div>
-              {winnerTeam === "A" && <div className="text-xs font-pixel text-yellow-300 mb-1 animate-pulse">👑 CHAMPION 👑</div>}
+              {winnerTeam === "A" && <div className="mb-1 flex items-center justify-center gap-2 text-xs font-pixel text-yellow-300 animate-pulse"><VoxelIcon name="trophy" size={22} /> CHAMPION</div>}
               <div className="text-xl md:text-2xl font-black text-blue-300 uppercase">{setup.a}</div>
               {setup.membersA?.length > 0 && (
                 <div className="text-xs text-blue-200 mt-1 opacity-80">
@@ -114,7 +155,7 @@ export default function Result() {
               : "bg-slate-900/80 border-red-900"
           }`}>
             <div>
-              {winnerTeam === "B" && <div className="text-xs font-pixel text-yellow-300 mb-1 animate-pulse">👑 CHAMPION 👑</div>}
+              {winnerTeam === "B" && <div className="mb-1 flex items-center justify-center gap-2 text-xs font-pixel text-yellow-300 animate-pulse"><VoxelIcon name="trophy" size={22} /> CHAMPION</div>}
               <div className="text-xl md:text-2xl font-black text-red-300 uppercase">{setup.b}</div>
               {setup.membersB?.length > 0 && (
                 <div className="text-xs text-red-200 mt-1 opacity-80">
@@ -134,10 +175,10 @@ export default function Result() {
         {/* STATUS JUARA / UCAPAN SELAMAT */}
         <div className="p-4 rounded-xl border-2 border-slate-700 bg-slate-950/80 text-center mb-6 shadow-md">
           {isDraw ? (
-            <p className="text-xl font-bold text-yellow-300">🤝 PERTANDINGAN SERI! KEDUA TIM SAMA-SAMA HEBAT!</p>
+            <p className="flex items-center justify-center gap-3 text-xl font-bold text-yellow-300"><VoxelIcon name="tie" size={34} /> PERTANDINGAN SERI! KEDUA TIM SAMA-SAMA HEBAT!</p>
           ) : (
             <p className="text-xl md:text-2xl font-bold leading-relaxed">
-              🎉 SELAMAT KEPADA <span className="text-yellow-300 underline font-black">{winnerName}</span> TELAH MEMENANGKAN BATTLE! 🎉
+              <VoxelIcon name="trophy" size={30} className="mr-2 inline-block align-middle" /> SELAMAT KEPADA <span className="text-yellow-300 underline font-black">{winnerName}</span> TELAH MEMENANGKAN BATTLE!
             </p>
           )}
         </div>
