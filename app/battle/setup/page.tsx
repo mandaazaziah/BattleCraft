@@ -3,6 +3,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useState, Suspense, useEffect } from "react";
 import PixelButton from "@/components/PixelButton";
 import { useSoundSystem } from "@/lib/useSound";
+import { battleUrl } from "@/lib/battle";
+import { supabase } from "@/lib/supabase";
 
 function SetupContent() {
   const params = useSearchParams();
@@ -27,7 +29,7 @@ function SetupContent() {
   // Validasi: Nama Tim A dan Tim B wajib diisi (anggota bersifat opsional)
   const isFormValid = a.trim() !== "" && b.trim() !== "";
 
-  const start = () => {
+  const start = async () => {
     if (!a.trim() || !b.trim()) {
       setError("Nama Tim A dan Tim B wajib diisi!");
       play("wrong");
@@ -44,9 +46,40 @@ function SetupContent() {
       ? membersBStr.split(",").map((m) => m.trim()).filter(Boolean)
       : [];
 
-    const payload = { category, difficulty: "medium", a: a.trim(), b: b.trim(), membersA, membersB, timePerQ };
-    sessionStorage.setItem("battleSetup", JSON.stringify(payload));
-    router.push("/battle/play");
+    if (!supabase) {
+      setError("Supabase belum dikonfigurasi.");
+      return;
+    }
+
+    const { data: battle, error: battleError } = await supabase
+      .from("battles")
+      .insert({
+        category,
+        difficulty: "medium",
+        team_a_name: a.trim(),
+        team_b_name: b.trim(),
+      })
+      .select("id")
+      .single();
+
+    if (battleError || !battle) {
+      setError(`Gagal membuat battle: ${battleError?.message ?? "Data tidak tersedia"}`);
+      return;
+    }
+
+    const members = [
+      ...membersA.map((name) => ({ battle_id: battle.id, team: "A", name })),
+      ...membersB.map((name) => ({ battle_id: battle.id, team: "B", name })),
+    ];
+    if (members.length) {
+      const { error: membersError } = await supabase.from("team_members").insert(members);
+      if (membersError) {
+        setError(`Gagal menyimpan anggota tim: ${membersError.message}`);
+        return;
+      }
+    }
+
+    router.push(`${battleUrl(battle.id)}&time=${timePerQ}`);
   };
 
   return (

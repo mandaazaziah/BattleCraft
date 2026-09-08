@@ -1,22 +1,13 @@
  "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import PixelButton from "@/components/PixelButton";
 import VoxelIcon from "@/components/VoxelIcon";
 import { useSoundSystem } from "@/lib/useSound";
-
-const PENALTIES = [
-  "🎤 Nyanyi 1 Lagu Anak-Anak / Pop",
-  "💃 Joget Gaya Karakter Minecraft 15 Detik",
-  "🐔 Tirukan Suara Hewan Peliharaan",
-  "👏 Berikan Tepuk Tangan Hebat untuk Tim Pemenang",
-  "🏃 Lari di Tempat Sambil Teriak 'BattleCraft!' 10x",
-  "🗿 Pose Menjadi Patung Batu Selama 20 Detik",
-  "📖 Bacakan Pantun Lucu Buatan Sendiri",
-  "🦖 Tirukan Gaya Dinosaurus / Creeper Berjalan",
-];
+import { loadBattleSetup } from "@/lib/battle";
+import { supabase } from "@/lib/supabase";
 
 const CONFETTI = [
   { emoji: "🎉", x: -270, y: 270, rotate: -220, delay: 0 },
@@ -31,39 +22,40 @@ const CONFETTI = [
   { emoji: "🎊", x: 270, y: 270, rotate: 220, delay: 0 },
 ];
 
-export default function Result() {
+function ResultContent() {
   const router = useRouter();
+  const params = useSearchParams();
   const { play } = useSoundSystem();
   const resultSoundPlayedRef = useRef(false);
   const [setup, setSetup] = useState<any>(null);
   const [score, setScore] = useState<{ A: number; B: number }>({ A: 0, B: 0 });
 
   useEffect(() => {
-    const rawSetup = sessionStorage.getItem("battleSetup");
-    const rawScore = sessionStorage.getItem("battleFinalScore");
-
-    if (!rawSetup) {
+    const battleId = params.get("battle");
+    const client = supabase;
+    if (!battleId || !client) {
       router.replace("/");
       return;
     }
-
-    setSetup(JSON.parse(rawSetup));
-    if (rawScore) {
-      const finalScore = JSON.parse(rawScore) as { A: number; B: number };
+    const load = async () => {
+      const [battleSetup, result] = await Promise.all([
+        loadBattleSetup(battleId),
+        client.from("battles").select("team_a_score,team_b_score").eq("id", battleId).single(),
+      ]);
+      if (!battleSetup || result.error || !result.data) {
+        router.replace("/");
+        return;
+      }
+      setSetup(battleSetup);
+      const finalScore = { A: result.data.team_a_score, B: result.data.team_b_score };
       setScore(finalScore);
-
       if (!resultSoundPlayedRef.current) {
         resultSoundPlayedRef.current = true;
-        play(
-          finalScore.A === finalScore.B
-            ? "draw"
-            : finalScore.A > finalScore.B
-              ? "win"
-              : "lose"
-        );
+        play(finalScore.A === finalScore.B ? "draw" : finalScore.A > finalScore.B ? "win" : "lose");
       }
-    }
-  }, [play, router]);
+    };
+    load();
+  }, [params, play, router]);
 
   if (!setup) return null;
 
@@ -186,7 +178,7 @@ export default function Result() {
         {/* TOMBOL BERIKUTNYA KE HALAMAN RODA HUKUMAN */}
         <div className="text-center pt-2">
           <PixelButton
-            href="/battle/penalty"
+            href={`/battle/penalty?battle=${encodeURIComponent(setup.id)}`}
             className="bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black px-10 py-4 text-xl shadow-[0_4px_20px_rgba(234,179,8,0.6)] animate-pulse inline-block"
           >
             ➡️ BERIKUTNYA (RODA HUKUMAN)
@@ -194,5 +186,13 @@ export default function Result() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function Result() {
+  return (
+    <Suspense fallback={<main className="grid min-h-screen place-items-center bg-slate-900 text-white">Memuat hasil...</main>}>
+      <ResultContent />
+    </Suspense>
   );
 }

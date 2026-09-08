@@ -23,8 +23,7 @@ export type SoundName =
   | "result_enter";
 
 export function isMuted(): boolean {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem("battlecraft_muted") === "1";
+  return false;
 }
 
 function createCtx(): AudioContext | null {

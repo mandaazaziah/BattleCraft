@@ -13,9 +13,6 @@ export default function SoundButton() {
   const toggle = () => {
     const next = !muted;
     setMuted(next);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("battlecraft_muted", next ? "1" : "0");
-    }
     if (!next) {
       setTimeout(() => play("click"), 20);
     }

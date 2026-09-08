@@ -3,10 +3,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import PixelButton from "@/components/PixelButton";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminLogin(){
   const [user,setUser]=useState(""); const [pass,setPass]=useState(""); const router=useRouter();
-  const login=(e:any)=>{e.preventDefault(); if(user==="admin"&&pass==="admin123"){sessionStorage.setItem("admin","1");router.push("/admin/dashboard")} else alert("Demo login: admin / admin123")};
+  const login=async(e:React.FormEvent<HTMLFormElement>)=>{
+    e.preventDefault();
+    if(!supabase){alert("Supabase belum dikonfigurasi.");return;}
+    const {data,error}=await supabase.from("admin_users").select("id").eq("username",user.trim()).eq("password",pass).eq("is_active",true).maybeSingle();
+    if(error){alert(`Gagal login: ${error.message}`);return;}
+    if(data) router.push("/admin/dashboard");
+    else alert("Username atau password salah.");
+  };
   return <main className="sky relative min-h-screen flex items-center justify-center overflow-hidden">
    <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/70 to-black/50 pointer-events-none" />
    <div className="absolute top-5 right-5 z-20">
@@ -35,7 +43,7 @@ export default function AdminLogin(){
         <motion.button whileHover={{boxShadow:"0 0 15px #f5cf55"}} type="submit" className="pixel-button w-full rounded bg-yellow-400 text-black py-3 font-bold">MASUK</motion.button>
        </motion.div>
       </div>
-      <p className="mt-6 text-center text-slate-900 text-xs">Demo: admin / admin123</p>
+      <p className="mt-6 text-center text-slate-900 text-xs">Login dikelola oleh database Supabase.</p>
      </form>
     </div>
    </motion.div>

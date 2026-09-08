@@ -1,17 +1,18 @@
  "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import Character from "@/components/Character";
-import { sampleQuestions, Question } from "@/lib/sampleQuestions";
+import { Question } from "@/lib/sampleQuestions";
+import { loadBattleSetup, Team } from "@/lib/battle";
+import { supabase } from "@/lib/supabase";
 import { useSoundSystem } from "@/lib/useSound";
 
 function shuffle<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
 }
 
-type Team = "A" | "B";
 type Feedback = "correct" | "wrong" | null;
 
 type TeamState = {
@@ -39,8 +40,9 @@ const toQuestion = (row: QuestionRow): Question => ({
   correct: row.correct_answer.charCodeAt(0) - 65,
 });
 
-export default function Play() {
+function PlayContent() {
   const router = useRouter();
+  const params = useSearchParams();
   const { play } = useSoundSystem();
   const battleStartedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -60,43 +62,55 @@ export default function Play() {
     B: { answered: false, feedback: null, selected: null },
   });
 
-  const timePerQ: number = setup?.timePerQ ?? 0;
+  const timePerQ = Number(params.get("time") ?? 20);
 
   useEffect(() => {
-    const raw = sessionStorage.getItem("battleSetup");
-    if (!raw) {
+    const battleId = params.get("battle");
+    const client = supabase;
+    if (!battleId || !client) {
       router.replace("/");
       return;
     }
 
-    const s = JSON.parse(raw);
-    setSetup(s);
+    const load = async () => {
+      const s = await loadBattleSetup(battleId);
+      if (!s) {
+        router.replace("/");
+        return;
+      }
+      setSetup(s);
 
-    // Ambil soal berdasarkan kategori (literasi / numerasi) dan acak 25 soal
-    const pool = sampleQuestions.filter((q) => q.category === s.category);
-    const shuffledPool = shuffle(pool);
+      const { data, error } = await client
+        .from("questions")
+        .select("id,category,question,option_a,option_b,option_c,option_d,correct_answer")
+        .eq("category", s.category)
+        .eq("is_active", true)
+        .order("id");
+      if (error || !data?.length) {
+        router.replace("/");
+        return;
+      }
 
-    // Ambil 25 soal pertama (atau duplicate jika kurang dari 25)
-    const questions25A = shuffledPool.slice(0, 25);
-    const questions25B = shuffle([...shuffledPool]).slice(0, 25);
+      const pool = (data as QuestionRow[]).map(toQuestion);
+      const questions25A = Array.from({ length: 25 }, (_, index) => pool[index % pool.length]);
+      const questions25B = Array.from({ length: 25 }, (_, index) => shuffle(pool)[index % pool.length]);
+      setAQs(questions25A);
+      setBQs(questions25B);
 
-    setAQs(questions25A);
-    setBQs(questions25B);
+      const assignments = [
+        ...questions25A.map((question, index) => ({ battle_id: battleId, question_id: question.id, team: "A", round: index + 1 })),
+        ...questions25B.map((question, index) => ({ battle_id: battleId, question_id: question.id, team: "B", round: index + 1 })),
+      ];
+      await client.from("battle_questions").upsert(assignments, { onConflict: "battle_id,team,round" });
 
-    // Mulai timer jika setup.timePerQ > 0
-    if (s.timePerQ && s.timePerQ > 0) {
-      setTimeLeft(s.timePerQ);
-      setTimerExpired(false);
-    } else {
-      setTimeLeft(null);
-    }
-
-    // Battle start fanfare (hanya sekali)
-    if (!battleStartedRef.current) {
-      battleStartedRef.current = true;
-      setTimeout(() => play("battle_start"), 500);
-    }
-  }, [router]);
+      if (timePerQ > 0) setTimeLeft(timePerQ);
+      if (!battleStartedRef.current) {
+        battleStartedRef.current = true;
+        setTimeout(() => play("battle_start"), 500);
+      }
+    };
+    load();
+  }, [params, play, router, timePerQ]);
 
   const qA = aQs[round];
   const qB = bQs[round];
@@ -114,7 +128,7 @@ export default function Play() {
   };
 
 
-  const answer = (team: Team, index: number) => {
+  const answer = async (team: Team, index: number) => {
     if (!setup) return;
     if (teamState[team].answered) return;
 
@@ -122,6 +136,9 @@ export default function Play() {
     if (!q) return;
 
     const correct = index === q.correct;
+    const isFirst = correct && firstCorrect === null;
+    const points = correct ? (isFirst ? 100 : 50) : 0;
+    const nextScore = { ...score, [team]: score[team] + points };
 
     play(correct ? "correct" : "wrong");
 
@@ -135,8 +152,6 @@ export default function Play() {
     }));
 
     if (correct) {
-      const isFirst = firstCorrect === null;
-
       if (isFirst) {
         setFirstCorrect(team);
         setScore((prev) => ({ ...prev, [team]: prev[team] + 100 }));
@@ -149,6 +164,20 @@ export default function Play() {
         setScore((prev) => ({ ...prev, [team]: prev[team] + 50 }));
         play("score_up");
       }
+    }
+
+    if (supabase && setup?.id) {
+      await Promise.all([
+        supabase.from("battle_questions").update({
+          answer: String.fromCharCode(65 + index),
+          is_correct: correct,
+          answered_at: new Date().toISOString(),
+        }).eq("battle_id", setup.id).eq("team", team).eq("round", round + 1),
+        supabase.from("battles").update({
+          team_a_score: nextScore.A,
+          team_b_score: nextScore.B,
+        }).eq("id", setup.id),
+      ]);
     }
   };
 
@@ -195,13 +224,16 @@ export default function Play() {
   useEffect(() => {
     if (!bothAnswered) return;
 
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       if (round >= 24) {
-        sessionStorage.setItem(
-          "battleFinalScore",
-          JSON.stringify(score)
-        );
-        router.push("/battle/result");
+        if (supabase && setup?.id) {
+          await supabase.from("battles").update({
+            status: "finished",
+            winner: score.A === score.B ? "DRAW" : score.A > score.B ? "A" : "B",
+            finished_at: new Date().toISOString(),
+          }).eq("id", setup.id);
+        }
+        router.push(`/battle/result?battle=${encodeURIComponent(setup.id)}`);
       } else {
         play("round_next");
         setRound((r) => r + 1);
@@ -210,7 +242,7 @@ export default function Play() {
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [bothAnswered, round, router, score]);
+  }, [bothAnswered, round, router, score, setup]);
 
   const teamCard = (team: Team, q?: Question) => {
     const isBlue = team === "A";
@@ -527,5 +559,13 @@ export default function Play() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function Play() {
+  return (
+    <Suspense fallback={<main className="grid min-h-screen place-items-center bg-slate-900 text-white">Menyiapkan battle...</main>}>
+      <PlayContent />
+    </Suspense>
   );
 }

@@ -62,7 +62,6 @@ export default function Dashboard(){
   const [saving,setSaving]=useState(false);
   const [error,setError]=useState("");
   useEffect(()=>{
-    if(sessionStorage.getItem("admin")!=="1"){router.replace("/admin/login");return;}
     const load=async()=>{
       if(!supabase){setLoading(false);return;}
       const {data,error:queryError}=await supabase.from("questions").select("*").eq("is_active",true).order("id");
@@ -72,7 +71,7 @@ export default function Dashboard(){
     };
     load();
   },[router]);
-  const logout=()=>{sessionStorage.removeItem("admin");router.push("/admin/login")};
+  const logout=()=>{router.push("/admin/login")};
   const filteredQs=questions.filter(q=>q.question.toLowerCase().includes(search.toLowerCase())).filter(q=>filter==="all"||q.category===filter);
   const openAdd=()=>{setEditing(null);setQText("");setQCat("literasi");setQDiff("easy");setQOpts(["","","",""]);setQCorrect(0);setShowForm(true);};
   const openEdit=(q:Question)=>{setEditing(q);setQText(q.question);setQCat(q.category);setQOpts([...q.options]);setQCorrect(q.correct);setShowForm(true);};

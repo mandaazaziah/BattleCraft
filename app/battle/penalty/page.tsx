@@ -1,24 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import PixelButton from "@/components/PixelButton";
 import VoxelIcon from "@/components/VoxelIcon";
 import { useSoundSystem } from "@/lib/useSound";
+import { loadBattleSetup } from "@/lib/battle";
+import { supabase } from "@/lib/supabase";
 
-const PENALTIES = [
-  "🎤 Nyanyi 1 Lagu Nasional",
-  "💃 Joget kicau mania",
-  "🐔 Tirukan Suara Hewan Peliharaan",
-  "👏 Tepuk dadang diding dudung",
-  "🗿 Membuat ekspresi wajah palng lucu",
-  "📖  Membuat kata-kata hari ini",
-  "🦖 Menirukan gerakan hewan",
-];
-
-export default function PenaltyPage() {
+function PenaltyContent() {
   const router = useRouter();
+  const params = useSearchParams();
   const { play } = useSoundSystem();
   const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const spinTickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -27,6 +20,7 @@ export default function PenaltyPage() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedPenalty, setSelectedPenalty] = useState<string | null>(null);
   const [wheelRotation, setWheelRotation] = useState(0);
+  const [penalties, setPenalties] = useState<string[]>([]);
 
   useEffect(() => {
     return () => {
@@ -40,19 +34,28 @@ export default function PenaltyPage() {
   }, []);
 
   useEffect(() => {
-    const rawSetup = sessionStorage.getItem("battleSetup");
-    const rawScore = sessionStorage.getItem("battleFinalScore");
-
-    if (!rawSetup) {
+    const battleId = params.get("battle");
+    const client = supabase;
+    if (!battleId || !client) {
       router.replace("/");
       return;
     }
-
-    setSetup(JSON.parse(rawSetup));
-    if (rawScore) {
-      setScore(JSON.parse(rawScore));
-    }
-  }, [router]);
+    const load = async () => {
+      const [battleSetup, result, penaltyResult] = await Promise.all([
+        loadBattleSetup(battleId),
+        client.from("battles").select("team_a_score,team_b_score").eq("id", battleId).single(),
+        client.from("penalties").select("penalty").eq("is_active", true).order("id"),
+      ]);
+      if (!battleSetup || result.error || !result.data) {
+        router.replace("/");
+        return;
+      }
+      setSetup(battleSetup);
+      setScore({ A: result.data.team_a_score, B: result.data.team_b_score });
+      setPenalties((penaltyResult.data ?? []).map((item) => item.penalty));
+    };
+    load();
+  }, [params, router]);
 
   if (!setup) return null;
 
@@ -86,9 +89,10 @@ export default function PenaltyPage() {
     };
     spinTickTimerRef.current = setTimeout(playNextTick, 100);
 
-    const randomIndex = Math.floor(Math.random() * PENALTIES.length);
+    if (!penalties.length) return;
+    const randomIndex = Math.floor(Math.random() * penalties.length);
     const extraSpins = 5 * 360; // 5 putaran penuh
-    const sliceAngle = 360 / PENALTIES.length;
+    const sliceAngle = 360 / penalties.length;
     const targetAngle = extraSpins + randomIndex * sliceAngle + sliceAngle / 2;
 
     setWheelRotation((prev) => prev + targetAngle);
@@ -100,7 +104,7 @@ export default function PenaltyPage() {
         spinTickTimerRef.current = null;
       }
       setIsSpinning(false);
-      setSelectedPenalty(PENALTIES[randomIndex]);
+      setSelectedPenalty(penalties[randomIndex]);
       play("spin_stop");
     }, spinDuration);
   };
@@ -227,7 +231,7 @@ export default function PenaltyPage() {
 
         {/* TOMBOL NAVIGASI BAWAH */}
         <div className="flex gap-4 justify-center flex-wrap pt-2">
-          <PixelButton href="/battle/result" className="bg-slate-200 hover:bg-slate-300 text-slate-950 font-bold px-5 py-2.5 text-sm">
+          <PixelButton href={`/battle/result?battle=${encodeURIComponent(setup.id)}`} className="bg-slate-200 hover:bg-slate-300 text-slate-950 font-bold px-5 py-2.5 text-sm">
             ⬅️ KEMBALI KE HASIL SKOR
           </PixelButton>
           <PixelButton href="/" className="bg-slate-200 hover:bg-slate-300 text-slate-950 font-bold px-5 py-2.5 text-sm">
@@ -242,5 +246,13 @@ export default function PenaltyPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function PenaltyPage() {
+  return (
+    <Suspense fallback={<main className="grid min-h-screen place-items-center bg-slate-900 text-white">Memuat roda hukuman...</main>}>
+      <PenaltyContent />
+    </Suspense>
   );
 }
