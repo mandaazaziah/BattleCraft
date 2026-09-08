@@ -1,10 +1,11 @@
  "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import Character from "@/components/Character";
 import { sampleQuestions, Question } from "@/lib/sampleQuestions";
+import { useSoundSystem } from "@/lib/useSound";
 
 function shuffle<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
@@ -21,6 +22,8 @@ type TeamState = {
 
 export default function Play() {
   const router = useRouter();
+  const { play } = useSoundSystem();
+  const battleStartedRef = useRef(false);
 
   const [setup, setSetup] = useState<any>(null);
   const [round, setRound] = useState(0);
@@ -55,6 +58,12 @@ export default function Play() {
 
     setAQs(questions25A);
     setBQs(questions25B);
+
+    // Battle start fanfare (hanya sekali)
+    if (!battleStartedRef.current) {
+      battleStartedRef.current = true;
+      setTimeout(() => play("battle_start"), 500);
+    }
   }, [router]);
 
   const qA = aQs[round];
@@ -71,6 +80,7 @@ export default function Play() {
     setProjectile(null);
     setHit(null);
   };
+
 
   const answer = (team: Team, index: number) => {
     if (!setup) return;
