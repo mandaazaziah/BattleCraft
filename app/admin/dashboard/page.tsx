@@ -1,143 +1,441 @@
-"use client";
+ "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import PixelButton from "@/components/PixelButton";
-import { Question, sampleQuestions } from "@/lib/sampleQuestions";
+import { AnimatePresence, motion } from "framer-motion";
+import Character from "@/components/Character";
+import { sampleQuestions, Question } from "@/lib/sampleQuestions";
+import { useSoundSystem } from "@/lib/useSound";
+import { supabase } from "@/lib/supabase";
 
-export default function Dashboard(){
-  const router=useRouter();
-  const [questions,setQuestions]=useState<Question[]>([...sampleQuestions]);
-  const [filter,setFilter]=useState("all");
-  const [search,setSearch]=useState("");
-  const [showForm,setShowForm]=useState(false);
-  const [editing,setEditing]=useState<Question|null>(null);
-  const [qText,setQText]=useState("");
-  const [qCat,setQCat]=useState<"literasi"|"numerasi">("literasi");
-  const [qDiff,setQDiff]=useState<"easy"|"medium"|"hard">("easy");
-  const [qOpts,setQOpts]=useState<string[]>(["","","",""]);
-  const [qCorrect,setQCorrect]=useState(0);
-  useEffect(()=>{if(sessionStorage.getItem("admin")!=="1")router.replace("/admin/login")},[router]);
-  const logout=()=>{sessionStorage.removeItem("admin");router.push("/admin/login")};
-  const filteredQs=questions.filter(q=>q.question.toLowerCase().includes(search.toLowerCase())).filter(q=>filter==="all"||q.category===filter);
-  const openAdd=()=>{setEditing(null);setQText("");setQCat("literasi");setQDiff("easy");setQOpts(["","","",""]);setQCorrect(0);setShowForm(true);};
-  const openEdit=(q:Question)=>{setEditing(q);setQText(q.question);setQCat(q.category);setQDiff(q.difficulty);setQOpts([...q.options]);setQCorrect(q.correct);setShowForm(true);};
-  const closeForm=()=>{setShowForm(false);setEditing(null);};
-  const handleSubmit=(e:any)=>{e.preventDefault();if(!qText.trim()||qOpts.some(o=>!o.trim())){alert("Isi semua field!");return;}const q:Question={id:editing?editing.id:Math.max(0,...questions.map(x=>x.id))+1,category:qCat,difficulty:qDiff,question:qText,options:[...qOpts],correct:qCorrect};if(editing){setQuestions(questions.map(x=>x.id===editing.id?q:x));}else{setQuestions([...questions,q]);}closeForm();};
-  const deleteQ=(id:number)=>{if(confirm("Hapus soal ini?"))setQuestions(questions.filter(q=>q.id!==id));};
-  const catCount=(cat:"literasi"|"numerasi")=>questions.filter(q=>q.category===cat).length;
-  const litCount=catCount("literasi"); const numCount=catCount("numerasi");
-  return <main className="sky relative min-h-screen p-5 md:p-8 overflow-hidden">
-   <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/70 to-black/50 pointer-events-none" />
-   {[...Array(6)].map((_,i)=><motion.div key={"tl"+i} className="absolute md:block hidden" style={{top:20+i*10,left:10}}><div className="w-3 h-3 mc-dark-stone-brick" /></motion.div>)}
-   {[...Array(6)].map((_,i)=><motion.div key={"bl"+i} className="absolute md:block hidden" style={{bottom:20+i*10,left:10}}><div className="w-3 h-3 mc-dark-stone-brick" /></motion.div>)}
-   {[...Array(6)].map((_,i)=><motion.div key={"tr"+i} className="absolute md:block hidden" style={{top:20+i*10,right:10}}><div className="w-3 h-3 mc-dark-stone-brick" /></motion.div>)}
-   {[...Array(6)].map((_,i)=><motion.div key={"br"+i} className="absolute md:block hidden" style={{bottom:20+i*10,right:10}}><div className="w-3 h-3 mc-dark-stone-brick" /></motion.div>)}
-   <div className="relative z-10 max-w-6xl mx-auto">
-    <header className="flex flex-wrap justify-between gap-4 items-center mb-6 pb-4 border-b-2 border-yellow-300/30">
-     <div>
-      <motion.div className="pixel-text text-xs text-yellow-300 mb-1">⚔ BATTLE-CRAFT ADMIN</motion.div>
-      <motion.h1 initial={{x:-20}} animate={{x:0}} className="text-4xl font-bold text-yellow-300">Question Manager</motion.h1>
-     </div>
-     <div className="flex gap-2">
-      <motion.div whileHover={{scale:1.08}} whileTap={{scale:.92}}><PixelButton href="/" className="bg-slate-200 text-sm">🏠 HOME</PixelButton></motion.div>
-      <motion.button whileHover={{scale:1.08}} whileTap={{scale:.92}} onClick={logout} className="pixel-button rounded bg-red-400 px-5 py-3 font-bold">LOGOUT</motion.button>
-     </div>
-    </header>
-     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-      <motion.div whileHover={{y:-6,scale:1.02}} className="pixel-border rounded bg-white/50 p-4 text-center backdrop-blur-md">
-       <div className="text-2xl mb-1">📚</div>
-       <div className="text-slate-900 font-bold">Total Soal</div>
-       <div className="text-3xl font-bold text-white">{questions.length}</div>
-      </motion.div>
-      <motion.div whileHover={{y:-6,scale:1.02}} className="pixel-border rounded bg-white/50 p-4 text-center backdrop-blur-md">
-       <div className="text-2xl mb-1">📖</div>
-       <div className="text-slate-900 font-bold">Literasi</div>
-       <div className="text-3xl font-bold text-white">{litCount}</div>
-      </motion.div>
-      <motion.div whileHover={{y:-6,scale:1.02}} className="pixel-border rounded bg-white/50 p-4 text-center backdrop-blur-md">
-       <div className="text-2xl mb-1">🔢</div>
-       <div className="text-slate-900 font-bold">Numerasi</div>
-       <div className="text-3xl font-bold text-white">{numCount}</div>
-      </motion.div>
-     </div>
-    <div className="bg-white/50 pixel-border rounded p-4 mb-4 backdrop-blur-md">
-     <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
-      <div className="flex flex-wrap gap-2">
-       <motion.button whileHover={{scale:1.05}} whileTap={{scale:.95}} onClick={()=>setFilter("all")} className={`pixel-button rounded px-4 py-2 font-bold transition-all ${filter==="all"?"bg-yellow-400 ring-2 ring-yellow-500":"bg-yellow-300"}`}>Semua ({questions.length})</motion.button>
-       <motion.button whileHover={{scale:1.05}} whileTap={{scale:.95}} onClick={()=>setFilter("literasi")} className={`pixel-button rounded px-4 py-2 font-bold transition-all ${filter==="literasi"?"bg-blue-400 ring-2 ring-blue-500 text-white":"bg-blue-300"}`}>Literasi ({litCount})</motion.button>
-       <motion.button whileHover={{scale:1.05}} whileTap={{scale:.95}} onClick={()=>setFilter("numerasi")} className={`pixel-button rounded px-4 py-2 font-bold transition-all ${filter==="numerasi"?"bg-green-400 ring-2 ring-green-500 text-white":"bg-green-300"}`}>Numerasi ({numCount})</motion.button>
-      </div>
-      <div className="flex gap-2">
-       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Cari soal..." className="pixel-input w-48 text-sm" />
-       <motion.button whileHover={{scale:1.1,rotate:5}} whileTap={{scale:.95}} onClick={openAdd} className="pixel-button rounded bg-indigo-500 text-white px-5 py-3 font-bold shadow-[3px_3px_0_#0b1119] relative group">
-        + Tambah Soal
-        <motion.span className="absolute -top-1 -right-1 text-xs bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center" style={{display:editing?"none":"block"}}>NEW</motion.span>
-       </motion.button>
-      </div>
-     </div>
-    </div>
-    <div className="pixel-border rounded bg-white/50 overflow-hidden shadow-xl backdrop-blur-md">
-     <table className="w-full text-left">
-      <thead className="bg-slate-900/70 text-white backdrop-blur-md">
-       <tr><th className="p-3">No</th><th className="p-3">Kategori</th><th className="p-3">Pertanyaan</th><th className="p-3">Jawaban</th><th className="p-3">Aksi</th></tr>
-      </thead>
-      <tbody>
-       {filteredQs.length===0?(<tr><td colSpan={5} className="p-6 text-center text-slate-500 pixel-text text-sm">📭 Tidak ada soal ditemukan</td></tr>):filteredQs.map((q,i)=>
-        <motion.tr key={q.id} initial={{opacity:0,x:-20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:20}} transition={{delay:i*0.03}} className="border-t hover:bg-indigo-50/50 group">
-         <td className="p-3 text-black font-bold">{i+1}</td>
-         <td className="p-3"><span className={`pixel-text text-[10px] px-2 py-1 rounded ${q.category==="literasi"?"bg-blue-100 text-blue-700":"bg-green-100 text-green-700"}`}>{q.category}</span></td>
-         <td className="p-3 min-w-[300px] text-black">{q.question}</td>
-         <td className="p-3 text-sm text-slate-500 font-bold">Opsi {String.fromCharCode(65+q.correct)}</td>
-         <td className="p-3 whitespace-nowrap space-x-2">
-          <motion.button whileHover={{scale:1.15}} whileTap={{scale:.9}} onClick={()=>openEdit(q)} className="font-bold text-indigo-700 hover:text-indigo-900">✏ Edit</motion.button>
-          <motion.button whileHover={{scale:1.15}} whileTap={{scale:.9}} onClick={()=>deleteQ(q.id)} className="font-bold text-red-600 hover:text-red-800">🗑 Hapus</motion.button>
-         </td>
-        </motion.tr>
-       )}
-      </tbody>
-     </table>
-    </div>
-   </div>
+function shuffle<T>(items: T[]) {
+  return [...items].sort(() => Math.random() - 0.5);
+}
 
-   <AnimatePresence>
-   {showForm&&
-    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-50 flex items-center justify-center p-4">
-     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeForm} />
-     <motion.div initial={{scale:.8,opacity:0,y:50}} animate={{scale:1,opacity:1,y:0}} exit={{scale:.8,opacity:0,y:50}} transition={{type:"spring",stiffness:300,damping:20}} className="relative z-10 w-full max-w-2xl pixel-border rounded bg-white/50 p-8 overflow-y-auto max-h-[90vh] backdrop-blur-md">
-      <div className="flex items-center justify-between mb-4">
-       <h2 className="pixel-text text-xl text-slate-800">{editing?"✏ EDIT SOAL":"➕ TAMBAH SOAL"}</h2>
-       <motion.button whileHover={{scale:1.2,rotate:90}} onClick={closeForm} className="text-xl text-slate-500 hover:text-red-500">✕</motion.button>
-      </div>
-       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-         <label className="pixel-text text-[10px] text-slate-600 block mb-1">KATEGORI</label>
-         <div className="flex gap-2"><label className="flex items-center gap-1 text-slate-600"><input type="radio" name="cat" checked={qCat==="literasi"} onChange={()=>setQCat("literasi")} />Literasi</label><label className="flex items-center gap-1 text-slate-600"><input type="radio" name="cat" checked={qCat==="numerasi"} onChange={()=>setQCat("numerasi")} />Numerasi</label></div>
-        </div>
-        <div>
-         <label className="pixel-text text-[10px] text-slate-600 block mb-1">PERTANYAAN</label>
-        <textarea value={qText} onChange={e=>setQText(e.target.value)} className="pixel-input w-full min-h-[80px] resize-none" placeholder="Masukkan pertanyaan..." />
-       </div>
-       <div>
-        <label className="pixel-text text-[10px] text-slate-600 block mb-1">OPSI JAWABAN (PILIH YANG BENAR)</label>
-        <div className="space-y-2">
-         {qOpts.map((opt,idx)=>
-          <div key={idx} className="flex items-center gap-2 p-2 rounded hover:bg-slate-50">
-           <input type="radio" name="correct" checked={qCorrect===idx} onChange={()=>setQCorrect(idx)} className="accent-indigo-600" />
-           <span className={`pixel-text text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${qCorrect===idx?"bg-indigo-500 text-white":"bg-slate-200 text-slate-600"}`}>{String.fromCharCode(65+idx)}</span>
-           <input value={opt} onChange={e=>{const newOpts=[...qOpts];newOpts[idx]=e.target.value;setQOpts(newOpts);}} className="pixel-input flex-1 text-sm" placeholder={`Opsi ${String.fromCharCode(65+idx)}`} />
-          </div>
-         )}
-        </div>
-       </div>
-       <div className="flex gap-3 pt-4 border-t">
-        <motion.button type="submit" whileHover={{scale:1.03}} whileTap={{scale:.97}} className="pixel-button rounded bg-indigo-500 text-white px-6 py-3 font-bold flex-1">💾 {editing?"UPDATE":"SIMPAN"}</motion.button>
-        <motion.button type="button" whileHover={{scale:1.03}} whileTap={{scale:.97}} onClick={closeForm} className="pixel-button rounded bg-slate-400 px-6 py-3 font-bold flex-1">BATAL</motion.button>
-       </div>
-      </form>
-     </motion.div>
-    </motion.div>
+type Team = "A" | "B";
+type Feedback = "correct" | "wrong" | null;
+
+type TeamState = {
+  answered: boolean;
+  feedback: Feedback;
+  selected: number | null;
+};
+
+type QuestionRow = {
+  id: number;
+  category: Question["category"];
+  difficulty: Question["difficulty"];
+  question: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_answer: "A" | "B" | "C" | "D";
+};
+
+const toQuestion = (row: QuestionRow): Question => ({
+  id: row.id,
+  category: row.category,
+  difficulty: row.difficulty,
+  question: row.question,
+  options: [row.option_a, row.option_b, row.option_c, row.option_d],
+  correct: row.correct_answer.charCodeAt(0) - 65,
+});
+
+export default function Play() {
+  const router = useRouter();
+  const { play } = useSoundSystem();
+
+  const [setup, setSetup] = useState<any>(null);
+  const [round, setRound] = useState(0);
+  const [score, setScore] = useState({ A: 0, B: 0 });
+  const [firstCorrect, setFirstCorrect] = useState<Team | null>(null);
+  const [projectile, setProjectile] = useState<Team | null>(null);
+  const [hit, setHit] = useState<Team | null>(null);
+  const [aQs, setAQs] = useState<Question[]>([]);
+  const [bQs, setBQs] = useState<Question[]>([]);
+  const [teamState, setTeamState] = useState<Record<Team, TeamState>>({
+    A: { answered: false, feedback: null, selected: null },
+    B: { answered: false, feedback: null, selected: null },
+  });
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem("battleSetup");
+    if (!raw) {
+      router.replace("/");
+      return;
     }
-   </AnimatePresence>
-  </main>
+
+    const s = JSON.parse(raw);
+    setSetup(s);
+
+    // Ambil soal aktif dari Supabase; soal contoh menjadi fallback offline.
+    const loadQuestions = async () => {
+      let pool = sampleQuestions.filter((q) => q.category === s.category);
+      if (supabase) {
+        const { data } = await supabase
+          .from("questions")
+          .select("id, category, difficulty, question, option_a, option_b, option_c, option_d, correct_answer")
+          .eq("category", s.category)
+          .eq("is_active", true)
+          .order("id");
+        if (data && data.length > 0) pool = (data as QuestionRow[]).map(toQuestion);
+      }
+
+      const shuffledPool = shuffle(pool);
+
+      // Ambil 25 soal pertama (atau duplicate jika kurang dari 25)
+      const questions25A = shuffledPool.slice(0, 25);
+      const questions25B = shuffle([...shuffledPool]).slice(0, 25);
+
+      setAQs(questions25A);
+      setBQs(questions25B);
+    };
+    loadQuestions();
+
+  }, [router]);
+
+  const qA = aQs[round];
+  const qB = bQs[round];
+
+  const bothAnswered = teamState.A.answered && teamState.B.answered;
+
+  const resetRound = () => {
+    setTeamState({
+      A: { answered: false, feedback: null, selected: null },
+      B: { answered: false, feedback: null, selected: null },
+    });
+    setFirstCorrect(null);
+    setProjectile(null);
+    setHit(null);
+  };
+
+
+  const answer = (team: Team, index: number) => {
+    if (!setup) return;
+    if (teamState[team].answered) return;
+
+    const q = team === "A" ? qA : qB;
+    if (!q) return;
+
+    const correct = index === q.correct;
+
+    setTeamState((prev) => ({
+      ...prev,
+      [team]: {
+        answered: true,
+        feedback: correct ? "correct" : "wrong",
+        selected: index,
+      },
+    }));
+
+    if (correct) {
+      const isFirst = firstCorrect === null;
+
+      if (isFirst) {
+        setFirstCorrect(team);
+        setScore((prev) => ({ ...prev, [team]: prev[team] + 100 }));
+        setProjectile(team);
+        setTimeout(() => setHit(team), 420);
+      } else {
+        setScore((prev) => ({ ...prev, [team]: prev[team] + 50 }));
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!bothAnswered) return;
+
+    const timer = setTimeout(() => {
+      if (round >= 24) {
+        sessionStorage.setItem(
+          "battleFinalScore",
+          JSON.stringify(score)
+        );
+        router.push("/battle/result");
+      } else {
+        setRound((r) => r + 1);
+        resetRound();
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [bothAnswered, round, router, score]);
+
+  const teamCard = (team: Team, q?: Question) => {
+    const isBlue = team === "A";
+    const state = teamState[team];
+    const teamName = isBlue ? setup.a : setup.b;
+
+    return (
+      <section
+        className={`relative overflow-hidden rounded-2xl border-[5px] ${
+          isBlue ? "border-blue-700" : "border-red-700"
+        } bg-white shadow-[0_8px_0_rgba(0,0,0,.3)]`}
+      >
+        <div
+          className={`flex items-center justify-between px-5 py-3 ${
+            isBlue ? "bg-blue-700" : "bg-red-700"
+          } text-white`}
+        >
+          <div>
+            <div className="pixel-text text-xs uppercase tracking-wider">
+              {teamName}
+            </div>
+            <div className="mt-1 text-xs font-black opacity-90">
+              SOAL {round + 1}/25
+            </div>
+          </div>
+
+          <div className="text-2xl font-black">{score[team]}</div>
+        </div>
+
+        <div className="h-3 bg-slate-900/20">
+          <motion.div
+            className={isBlue ? "h-full bg-blue-500" : "h-full bg-red-500"}
+            animate={{ width: `${Math.min(score[team] / 25, 100)}%` }}
+          />
+        </div>
+
+        <div className="p-5 md:p-6">
+          <div className="min-h-[92px] rounded-xl border-2 border-slate-200 bg-slate-50 p-4 text-base font-extrabold leading-relaxed text-slate-800 md:text-lg">
+            {q?.question}
+          </div>
+
+          <div className="mt-4 grid gap-2.5">
+            {q?.options.map((option, index) => {
+              const selected = state.selected === index;
+              const correct = index === q.correct;
+
+              let style =
+                "border-slate-300 bg-white hover:-translate-y-0.5 hover:bg-slate-100";
+
+              if (state.answered) {
+                if (selected && state.feedback === "wrong")
+                  style = "border-red-500 bg-red-100 text-red-800";
+                else if (correct && state.feedback === "correct")
+                  style = "border-green-500 bg-green-100 text-green-800";
+                else
+                  style = "border-slate-200 bg-slate-100 opacity-60";
+              }
+
+              return (
+                <button
+                  key={index}
+                  disabled={state.answered}
+                  onClick={() => answer(team, index)}
+                  className={`flex items-center gap-3 rounded-xl border-2 p-3 text-left font-extrabold text-slate-800 transition ${style}`}
+                >
+                  <span
+                    className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-sm text-white ${
+                      isBlue ? "bg-blue-600" : "bg-red-600"
+                    }`}
+                  >
+                    {String.fromCharCode(65 + index)}
+                  </span>
+                  <span>{option}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <AnimatePresence>
+            {!state.answered && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className={`mt-3 text-center text-xs font-black ${
+                  isBlue ? "text-blue-700" : "text-red-700"
+                }`}
+              >
+                ⚡ CEPAT! PILIH JAWABANMU
+              </motion.div>
+            )}
+
+            {state.feedback && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`mt-3 text-center font-black ${
+                  state.feedback === "correct"
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
+                {state.feedback === "correct"
+                  ? firstCorrect === team
+                    ? "⚔️ BENAR! +100 — KAMU DULUAN!"
+                    : "✓ BENAR! +50"
+                  : "✕ SALAH!"}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </section>
+    );
+  };
+
+  if (!setup || !qA || !qB) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-slate-900 text-white">
+        Menyiapkan battle...
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen overflow-x-hidden bg-gradient-to-b from-sky-400 via-sky-300 to-green-700 p-3 md:p-5">
+      <div className="mx-auto max-w-[1450px]">
+        {/* TOP SCORE */}
+        <div className="mb-2 grid grid-cols-2 gap-2 md:gap-4">
+          <div className="rounded-xl border-4 border-blue-900 bg-blue-700 px-3 py-2 text-white shadow-[0_5px_0_rgba(0,0,0,.35)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="pixel-text text-xs">{setup.a}</div>
+                <div className="text-[10px] font-black">SOAL {round + 1}/25</div>
+              </div>
+              <b className="text-xl">⭐ {score.A}</b>
+            </div>
+          </div>
+
+          <div className="rounded-xl border-4 border-red-900 bg-red-700 px-3 py-2 text-white shadow-[0_5px_0_rgba(0,0,0,.35)]">
+            <div className="flex items-center justify-between">
+              <b className="text-xl">⭐ {score.B}</b>
+              <div className="text-right">
+                <div className="pixel-text text-xs">{setup.b}</div>
+                <div className="text-[10px] font-black">SOAL {round + 1}/25</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ARENA */}
+        <div className="relative mb-3 h-[250px] overflow-hidden rounded-2xl border-4 border-slate-900/70 bg-gradient-to-b from-sky-400 via-sky-300 to-green-600 shadow-inner md:h-[320px]">
+          <div className="voxel-cloud left-[8%] top-8" />
+          <div className="voxel-cloud right-[10%] top-12" />
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(#5fa33e_0_30%,#7a4d25_30%_100%)] border-t-4 border-[#3e7025]" />
+
+          {/* Karakter Team A (Kiri) */}
+          <div className="absolute bottom-10 left-[10%] md:left-[18%] z-10">
+            <Character team="A" attacking={projectile === "A"} hit={hit === "A"} />
+          </div>
+
+          {/* Karakter Team B (Kanan) */}
+          <div className="absolute bottom-10 right-[10%] md:right-[18%] z-10">
+            <Character team="B" attacking={projectile === "B"} hit={hit === "B"} />
+          </div>
+
+          {/* TEKS VS DI TENGAH-TENGAH PERSIS */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <motion.div
+              className="rounded-xl border-4 border-black bg-yellow-400 px-6 py-2.5 text-3xl md:text-4xl font-black text-slate-950 shadow-[5px_5px_0_#000]"
+              animate={{ scale: [1, 1.1, 1], rotate: [-2, 2, -2] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+            >
+              VS
+            </motion.div>
+          </div>
+
+          {/* Animasi Lempar Menyerang: Sesuai Senjata Karakter (Trisula untuk Team A, Panah untuk Team B) */}
+          <AnimatePresence>
+            {projectile && (
+              <motion.div
+                key={`${projectile}-${round}-${firstCorrect}`}
+                initial={{
+                  opacity: 0,
+                  x: projectile === "A" ? -140 : 140,
+                  y: -15,
+                  scale: 0.7,
+                  rotate: projectile === "A" ? 45 : 0,
+                }}
+                animate={{
+                  opacity: [0, 1, 1, 0],
+                  x: projectile === "A" ? [-140, 0, 240] : [140, 0, -240],
+                  y: [-15, -45, 10],
+                  scale: [0.7, 1.2, 1],
+                  rotate: projectile === "A" ? [45, 405, 765] : [0, 0, 0],
+                }}
+                transition={{ duration: 0.65, ease: "easeOut" }}
+                onAnimationComplete={() => setProjectile(null)}
+                className="absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+              >
+                {projectile === "A" ? (
+                  /* Output Serangan Team A: Trisula Terbang Berputar (Flying Trident) */
+                  <div className="relative flex items-center justify-center">
+                    <div className="relative w-14 h-14 select-none filter drop-shadow-[0_0_12px_#2dd4bf]">
+                      {/* 3 Mata Trisula */}
+                      <div className="absolute top-0 left-1 w-2.5 h-6 bg-[#2dd4bf] border-2 border-[#0f766e] shadow-[inset_1px_1px_0px_#ffffff]" />
+                      <div className="absolute top-[-4px] left-4 w-2.5 h-8 bg-[#5eead4] border-2 border-[#0f766e] shadow-[inset_1px_1px_0px_#ffffff]" />
+                      <div className="absolute top-0 left-7 w-2.5 h-6 bg-[#2dd4bf] border-2 border-[#0f766e] shadow-[inset_1px_1px_0px_#ffffff]" />
+                      <div className="absolute top-5 left-1 w-9 h-2.5 bg-[#0f766e] border border-black" />
+                      <div className="absolute top-7 left-4 w-2.5 h-9 bg-[#115e59] border border-black" />
+                    </div>
+                    {/* Jejak Partikel Air/Buih Prismarine */}
+                    <div className="absolute -left-10 top-1/2 -translate-y-1/2 w-20 h-4 bg-gradient-to-r from-transparent via-[#2dd4bf]/70 to-[#5eead4] rounded-full blur-[2px]" />
+                  </div>
+                ) : (
+                  /* Output Serangan Team B: Anak Panah Meluncur Lurus Cepat (Flying Tipped Arrow) */
+                  <div className="relative flex items-center justify-center">
+                    <div className="relative w-14 h-3.5 bg-[#8b5a2b] border border-black flex items-center shadow-[0_0_12px_#f97316]">
+                      {/* Mata Panah Flint Tajam Menghadap Kiri */}
+                      <div className="absolute -left-3 w-4 h-5 bg-[#4b5563] border border-black transform rotate-45 shadow-sm" />
+                      {/* Poros Kayu */}
+                      <div className="w-full h-1 bg-[#d97706]" />
+                      {/* Bulu Panah Putih (Feather Fletching) di Kanan */}
+                      <div className="absolute -right-2.5 w-3 h-5 bg-white border border-black" />
+                    </div>
+                    {/* Jejak Partikel Panah Melesat */}
+                    <div className="absolute -right-10 top-1/2 -translate-y-1/2 w-20 h-3 bg-gradient-to-l from-transparent via-orange-500/80 to-amber-300 rounded-full blur-[1px]" />
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Efek Kena Serangan (Hit Splash Minecraft Heart Damage & Particle) */}
+            {hit && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.4 }}
+                animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1.4, 1.1] }}
+                transition={{ duration: 0.5 }}
+                className={`absolute top-1/3 z-40 flex items-center gap-1 font-black text-yellow-300 drop-shadow-[3px_3px_0_#000] ${
+                  hit === "A" ? "right-[15%] md:right-[22%]" : "left-[15%] md:left-[22%]"
+                }`}
+              >
+                <span className="text-3xl">💔</span>
+                <span className="text-3xl text-red-500 font-pixel drop-shadow-[2px_2px_0_#000]">-100</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Notifikasi Siapa Cepat Duluan */}
+          {firstCorrect && (
+            <div
+              className={`absolute top-3 left-1/2 -translate-x-1/2 rounded-full border-2 border-black bg-white/95 px-5 py-1 text-xs md:text-sm font-black shadow-md z-30 ${
+                firstCorrect === "A" ? "text-blue-700" : "text-red-700"
+              }`}
+            >
+              ⚡ {firstCorrect === "A" ? setup.a : setup.b} MENYERANG LEBIH CEPAT! (+100)
+            </div>
+          )}
+        </div>
+
+        {/* QUESTIONS */}
+        <div className="grid gap-3 md:grid-cols-2 md:gap-5">
+          {teamCard("A", qA)}
+          {teamCard("B", qB)}
+        </div>
+
+        <div className="mt-3 flex items-center justify-between rounded-xl border-4 border-slate-900 bg-slate-950 px-4 py-2 text-white shadow-[0_5px_0_rgba(0,0,0,.35)]">
+          <span className="text-xs font-black">⚡ SIAPA CEPAT DIA DAPAT</span>
+          <span className="pixel-text text-xs">ROUND {round + 1} / 25</span>
+          <button
+            onClick={() => router.push("/")}
+            className="rounded-lg bg-slate-700 px-3 py-1 text-xs font-black hover:bg-slate-600"
+          >
+            KELUAR
+          </button>
+        </div>
+      </div>
+    </main>
+  );
 }

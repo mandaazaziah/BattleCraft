@@ -1,11 +1,12 @@
  "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import Character from "@/components/Character";
 import { sampleQuestions, Question } from "@/lib/sampleQuestions";
 import { useSoundSystem } from "@/lib/useSound";
+import { supabase } from "@/lib/supabase";
 
 function shuffle<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
@@ -20,9 +21,31 @@ type TeamState = {
   selected: number | null;
 };
 
+type QuestionRow = {
+  id: number;
+  category: Question["category"];
+  difficulty: Question["difficulty"];
+  question: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_answer: "A" | "B" | "C" | "D";
+};
+
+const toQuestion = (row: QuestionRow): Question => ({
+  id: row.id,
+  category: row.category,
+  difficulty: row.difficulty,
+  question: row.question,
+  options: [row.option_a, row.option_b, row.option_c, row.option_d],
+  correct: row.correct_answer.charCodeAt(0) - 65,
+});
+
 export default function Play() {
   const router = useRouter();
   const { play } = useSoundSystem();
+  const battleStartedRef = useRef(false);
 
   const [setup, setSetup] = useState<any>(null);
   const [round, setRound] = useState(0);
@@ -58,6 +81,11 @@ export default function Play() {
     setAQs(questions25A);
     setBQs(questions25B);
 
+    // Battle start fanfare (hanya sekali)
+    if (!battleStartedRef.current) {
+      battleStartedRef.current = true;
+      setTimeout(() => play("battle_start"), 500);
+    }
   }, [router]);
 
   const qA = aQs[round];
